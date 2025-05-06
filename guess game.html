@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Guess the Word</title>
+  <style>
+    body {
+      background: linear-gradient(135deg, #f7cac9, #92a8d1);
+      font-family: 'Segoe UI', sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
+
+    h1 {
+      color: #fff;
+      margin-bottom: 20px;
+    }
+
+    #wordContainer {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .letter-box {
+      width: 40px;
+      height: 50px;
+      background-color: #ffffffbb;
+      border-radius: 8px;
+      text-align: center;
+      font-size: 24px;
+      font-weight: bold;
+      line-height: 50px;
+      border: 2px solid #fff;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    }
+
+    #inputArea {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+
+    input[type="text"] {
+      padding: 10px;
+      font-size: 16px;
+      border: none;
+      border-radius: 6px;
+      outline: none;
+      text-transform: uppercase;
+    }
+
+    button {
+      padding: 10px 20px;
+      background-color: #fff;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background 0.3s;
+    }
+
+    button:hover {
+      background-color: #ddd;
+    }
+
+    #message {
+      color: #fff;
+      font-size: 18px;
+      margin-top: 10px;
+    }
+
+    #hintButton {
+      background-color: #f7a7a2;
+      font-size: 14px;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎮 Guess the Word</h1>
+  <div id="wordContainer"></div>
+
+  <div id="inputArea">
+    <input type="text" id="letterInput" maxlength="1" placeholder="Enter a letter" />
+    <button onclick="guessLetter()">Guess</button>
+    <button id="hintButton" onclick="giveHint()">Hint</button>
+    <div id="message"></div>
+  </div>
+
+  <script>
+    const allWords = [ "APPLE", "DREAM", "HOUSE", "WATER", "LIGHT", "TRAIN", "CLOUD",  "NEMOO"]
+    let usedWords = [];
+    let word = "";
+    let guessed = [];
+    let tries = 6;
+    let hintUsed = false;
+
+    const wordContainer = document.getElementById("wordContainer");
+    const message = document.getElementById("message");
+    const input = document.getElementById("letterInput");
+
+    function startNewGame() {
+      hintUsed = false; // Reset hint usage for the new round
+      if (usedWords.length === allWords.length) {
+        message.textContent = "🎉 You've completed all words! Refresh to start over.";
+        disableInput();
+        return;
+      }
+
+      // Choose a new word that hasn't been used yet
+      do {
+        word = allWords[Math.floor(Math.random() * allWords.length)];
+      } while (usedWords.includes(word));
+
+      usedWords.push(word);
+      guessed = Array(word.length).fill("_");
+      tries = 6;
+      input.disabled = false;
+      input.value = "";
+      message.textContent = "";
+      renderWord();
+    }
+
+    function renderWord() {
+      wordContainer.innerHTML = "";
+      guessed.forEach(letter => {
+        const box = document.createElement("div");
+        box.className = "letter-box";
+        box.textContent = letter;
+        wordContainer.appendChild(box);
+      });
+    }
+
+    function guessLetter() {
+      const guess = input.value.toUpperCase();
+      input.value = "";
+
+      if (!guess.match(/^[A-Z]$/)) {
+        message.textContent = "⚠️ Please enter a valid letter.";
+        return;
+      }
+
+      let found = false;
+      for (let i = 0; i < word.length; i++) {
+        if (word[i] === guess && guessed[i] === "_") {
+          guessed[i] = guess;
+          found = true;
+        }
+      }
+
+      if (!found) {
+        tries--;
+        message.textContent = `❌ Wrong guess! ${tries} tries left.`;
+      } else {
+        message.textContent = `✅ Good job!`;
+      }
+
+      renderWord();
+
+      if (!guessed.includes("_")) {
+        message.textContent = `🎉 You guessed the word: ${word}! Starting new word...`;
+        disableInput();
+        setTimeout(startNewGame, 2000);
+      } else if (tries === 0) {
+        message.textContent = `💀 Game Over! The word was: ${word}. Starting new word...`;
+        disableInput();
+        setTimeout(startNewGame, 2000);
+      }
+    }
+
+    function disableInput() {
+      input.disabled = true;
+    }
+
+    function giveHint() {
+      if (hintUsed) {
+        message.textContent = "⚠️ You've already used your hint!";
+        return;
+      }
+
+      // Reveal two random unguessed letters in the word
+      const unguessedIndices = [];
+      for (let i = 0; i < word.length; i++) {
+        if (guessed[i] === "_") {
+          unguessedIndices.push(i);
+        }
+      }
+
+      if (unguessedIndices.length < 2) {
+        message.textContent = "⚠️ Not enough unguessed letters left for a hint!";
+        return;
+      }
+
+      // Choose two random unguessed letters
+      let hintIndices = [];
+      while (hintIndices.length < 2) {
+        let randomIndex = unguessedIndices[Math.floor(Math.random() * unguessedIndices.length)];
+        if (!hintIndices.includes(randomIndex)) {
+          hintIndices.push(randomIndex);
+        }
+      }
+
+      // Reveal the letters
+      hintIndices.forEach(index => {
+        guessed[index] = word[index];
+      });
+
+      hintUsed = true;
+      renderWord();
+      message.textContent = "✨ Hint used! Two letters revealed.";
+    }
+
+    startNewGame();
+  </script>
+</body>
+</html>
